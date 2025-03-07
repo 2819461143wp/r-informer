@@ -21,4 +21,4 @@ checkpoints/
 record/
 
 # Ignore result directory
-result/
+results/

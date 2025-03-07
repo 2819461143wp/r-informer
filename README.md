@@ -1,3 +1,8 @@
+脚本形参：
+```shell
+--model informer --data QianTangRiver2020-2024WorkedFull --attn prob --freq h --device 0
+```
+
 ## 记录
 
 ### 2025/2/19
