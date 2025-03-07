@@ -1,1 +1,0 @@
-python -u main_informer.py --model informer --data 2021 --attn prob --freq 4h --devices 0
