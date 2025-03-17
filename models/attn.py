@@ -126,25 +126,36 @@ class ProbAttention(nn.Module):
 
 
 class AttentionLayer(nn.Module):
-    def __init__(self, attention, d_model, n_heads, 
+    def __init__(self, attention, d_model, n_heads,
                  d_keys=None, d_values=None, mix=False):
         super(AttentionLayer, self).__init__()
 
-        d_keys = d_keys or (d_model//n_heads)
-        d_values = d_values or (d_model//n_heads)
+        d_keys = d_keys or (d_model // n_heads)
+        d_values = d_values or (d_model // n_heads)
 
         self.inner_attention = attention
+        # 使用动态适应输入维度
         self.query_projection = nn.Linear(d_model, d_keys * n_heads)
         self.key_projection = nn.Linear(d_model, d_keys * n_heads)
         self.value_projection = nn.Linear(d_model, d_values * n_heads)
         self.out_projection = nn.Linear(d_values * n_heads, d_model)
         self.n_heads = n_heads
         self.mix = mix
+        self.d_model = d_model
+        self.d_keys = d_keys
+        self.d_values = d_values
 
     def forward(self, queries, keys, values, attn_mask):
-        B, L, _ = queries.shape
+        B, L, input_dim = queries.shape
         _, S, _ = keys.shape
         H = self.n_heads
+
+        # 如果输入维度与预期不同，调整投影层
+        if input_dim != self.d_model:
+            self.query_projection = nn.Linear(input_dim, self.d_keys * H).to(queries.device)
+            self.key_projection = nn.Linear(input_dim, self.d_keys * H).to(keys.device)
+            self.value_projection = nn.Linear(input_dim, self.d_values * H).to(values.device)
+            self.out_projection = nn.Linear(self.d_values * H, input_dim).to(queries.device)
 
         queries = self.query_projection(queries).view(B, L, H, -1)
         keys = self.key_projection(keys).view(B, S, H, -1)
@@ -157,7 +168,48 @@ class AttentionLayer(nn.Module):
             attn_mask
         )
         if self.mix:
-            out = out.transpose(2,1).contiguous()
+            out = out.transpose(2, 1).contiguous()
         out = out.view(B, L, -1)
 
         return self.out_projection(out), attn
+
+# class AttentionLayer(nn.Module):
+#     def __init__(self, attention, d_model, n_heads,
+#                  d_keys=None, d_values=None, mix=False):
+#         super(AttentionLayer, self).__init__()
+#
+#         d_keys = d_keys or (d_model//n_heads)
+#         d_values = d_values or (d_model//n_heads)
+#
+#         self.inner_attention = attention
+#         self.query_projection = nn.Linear(d_model, d_keys * n_heads)
+#         self.key_projection = nn.Linear(d_model, d_keys * n_heads)
+#         self.value_projection = nn.Linear(d_model, d_values * n_heads)
+#         self.out_projection = nn.Linear(d_values * n_heads, d_model)
+#         self.n_heads = n_heads
+#         self.mix = mix
+#
+#     def forward(self, queries, keys, values, attn_mask):
+#         B, L, _ = queries.shape
+#         _, S, _ = keys.shape
+#         H = self.n_heads
+#         # 添加调试信息
+#         print(f"queries shape: {queries.shape}")
+#         print(f"keys shape: {keys.shape}")
+#         print(f"values shape: {values.shape}")
+#
+#         queries = self.query_projection(queries).view(B, L, H, -1)
+#         keys = self.key_projection(keys).view(B, S, H, -1)
+#         values = self.value_projection(values).view(B, S, H, -1)
+#
+#         out, attn = self.inner_attention(
+#             queries,
+#             keys,
+#             values,
+#             attn_mask
+#         )
+#         if self.mix:
+#             out = out.transpose(2,1).contiguous()
+#         out = out.view(B, L, -1)
+#
+#         return self.out_projection(out), attn

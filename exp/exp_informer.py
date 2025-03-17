@@ -188,7 +188,7 @@ class Exp_Informer(Exp_Basic):
             freq = args.detail_freq
             Data = Dataset_Pred
         else:
-            shuffle_flag = True;
+            shuffle_flag = False;
             drop_last = True;
             batch_size = args.batch_size;
             freq = args.freq

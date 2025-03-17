@@ -210,6 +210,9 @@ class LocalRNN(nn.Module):
             self.rnn = nn.LSTM(input_size, hidden_size, batch_first=True, bidirectional=False)
         else:
             self.rnn = nn.RNN(input_size, hidden_size, batch_first=True, bidirectional=False)
+
+        # # 添加投影层，将双向输出(hidden_size*2)转换回原始维度(hidden_size)
+        # self.projection = nn.Linear(hidden_size * 2, hidden_size)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x):
@@ -221,6 +224,8 @@ class LocalRNN(nn.Module):
                 padding = torch.zeros(batch_size, self.ksize - x_chunk.size(1), x_chunk.size(2)).to(x.device)
                 x_chunk = torch.cat([x_chunk, padding], dim=1)
             output, _ = self.rnn(x_chunk)
+            # # 应用投影层
+            # output = self.projection(output)
             outputs.append(output)
 
         outputs = torch.cat(outputs, dim=1)
