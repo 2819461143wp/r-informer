@@ -16,40 +16,15 @@ import os
 import time
 
 import warnings
-
 warnings.filterwarnings('ignore')
 import json
-
+from sklearn.model_selection import ParameterGrid
 
 class Exp_Informer(Exp_Basic):
     def __init__(self, args):
         super(Exp_Informer, self).__init__(args)
         self.train_losses = []  # 存储每个 epoch 的训练损失
         self.test_losses = []  # 存储每个 epoch 的测试损失
-        self.mse_train = []  # 存储每个 epoch 的训练 mse
-        self.mse_test = []  # 存储每个 epoch 的测试 mse
-        self.mae_train = []  # 存储每个 epoch 的训练 mae
-        self.mae_test = []  # 存储每个 epoch 的测试 mae
-        self.rmse_train = []  # 存储每个 epoch 的训练 rmse
-        self.rmse_test = []  # 存储每个 epoch 的测试 rmse
-        self.mape_train = []  # 存储每个 epoch 的训练 mape
-        self.mape_test = []  # 存储每个 epoch 的测试 mape
-        self.mspe_train = []  # 存储每个 epoch 的训练 mspe
-        self.mspe_test = []  # 存储每个 epoch 的测试 mspe
-        self.rse_train = []  # 存储每个 epoch 的训练 rse
-        self.rse_test = []  # 存储每个 epoch 的测试 rse
-        self.corr_train = []  # 存储每个 epoch 的训练 corr
-        self.corr_test = []  # 存储每个 epoch 的测试 corr
-        self.spearman_corr_train = []  # 存储每个 epoch 的训练 spearman_corr
-        self.spearman_corr_test = []  # 存储每个 epoch 的测试 spearman_corr
-        self.euclidean_dist_train = []  # 存储每个 epoch 的训练 euclidean_dist
-        self.euclidean_dist_test = []  # 存储每个 epoch 的测试 euclidean_dist
-        self.dtw_dist_train = []  # 存储每个 epoch 的训练 dtw_dist
-        self.dtw_dist_test = []  # 存储每个 epoch 的测试 dtw_dist
-        self.r2_score_train = []  # 存储每个 epoch 的训练 r2_score
-        self.r2_score_test = []  # 存储每个 epoch 的测试 r2_score
-        self.accuracy_train = []  # 存储每个 epoch 的训练 accuracy
-        self.accuracy_test = []  # 存储每个 epoch 的测试 accuracy
 
     def convert_to_serializable(self, obj):
         if isinstance(obj, dict):
@@ -62,7 +37,7 @@ class Exp_Informer(Exp_Basic):
             return int(obj)
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
-            return obj
+        return obj
 
     def save_losses(self, filename="losses.json"):
         """将训练和测试损失保存到文件中"""
@@ -70,58 +45,9 @@ class Exp_Informer(Exp_Basic):
             "train_losses": self.train_losses,
             "test_losses": self.test_losses
         }
-
-        losses_dict = self.convert_to_serializable(losses_dict)
-
         with open(filename, 'w') as f:
-            json.dump(losses_dict, f, indent=4)  # 使用 json 保存为可读格式
+            json.dump(self.convert_to_serializable(losses_dict), f, indent=4)  # 使用 json 保存为可读格式
         print(f"Losses saved to {filename}")
-
-    def save_train_metrics(self, filename="train_metrics.json"):
-        """将训练指标保存到文件中"""
-        metrics_dict = {
-            "mse": self.mse_train,
-            "mae": self.mae_train,
-            "rmse": self.rmse_train,
-            "mape": self.mape_train,
-            "mspe": self.mspe_train,
-            "rse": self.rse_train,
-            "corr": self.corr_train,
-            "spearman_corr": self.spearman_corr_train,
-            "euclidean_dist": self.euclidean_dist_train,
-            "dtw_dist": self.dtw_dist_train,
-            "r2_score": self.r2_score_train,
-            "accuracy": self.accuracy_train
-        }
-
-        metrics_dict = self.convert_to_serializable(metrics_dict)
-
-        with open(filename, 'w') as f:
-            json.dump(metrics_dict, f, indent=4)
-        print(f"Train metrics saved to {filename}")
-
-    def save_test_metrics(self, filename="test_metrics.json"):
-        """将测试指标保存到文件中"""
-        metrics_dict = {
-            "mse": self.mse_test,
-            "mae": self.mae_test,
-            "rmse": self.rmse_test,
-            "mape": self.mape_test,
-            "mspe": self.mspe_test,
-            "rse": self.rse_test,
-            "corr": self.corr_test,
-            "spearman_corr": self.spearman_corr_test,
-            "euclidean_dist": self.euclidean_dist_test,
-            "dtw_dist": self.dtw_dist_test,
-            "r2_score": self.r2_score_test,
-            "accuracy": self.accuracy_test
-        }
-
-        metrics_dict = self.convert_to_serializable(metrics_dict)
-
-        with open(filename, 'w') as f:
-            json.dump(metrics_dict, f, indent=4)
-        print(f"Test metrics saved to {filename}")
 
     def _build_model(self):
         model_dict = {
@@ -170,9 +96,6 @@ class Exp_Informer(Exp_Basic):
             'ECL': Dataset_Custom,
             'Solar': Dataset_Custom,
             'custom': Dataset_Custom,
-            'qiantangjiang': Dataset_Custom,
-            'QianTangRiver2020-2024WorkedFull': Dataset_Custom,
-            'new_data': Dataset_Custom,
         }
         Data = data_dict[self.args.data]
         timeenc = 0 if args.embed != 'timeF' else 1
@@ -237,7 +160,7 @@ class Exp_Informer(Exp_Basic):
 
     def train(self, setting):
         train_data, train_loader = self._get_data(flag='train')
-        # vali_data, vali_loader = self._get_data(flag = 'val')
+        vali_data, vali_loader = self._get_data(flag='val')
         test_data, test_loader = self._get_data(flag='test')
 
         path = os.path.join(self.args.checkpoints, setting)
@@ -267,7 +190,6 @@ class Exp_Informer(Exp_Basic):
                 model_optim.zero_grad()
                 pred, true = self._process_one_batch(
                     train_data, batch_x, batch_y, batch_x_mark, batch_y_mark)
-
                 loss = criterion(pred, true)
                 train_loss.append(loss.item())
 
@@ -289,26 +211,29 @@ class Exp_Informer(Exp_Basic):
 
             print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
             train_loss = np.average(train_loss)
-            # vali_loss = self.vali(vali_data, vali_loader, criterion)
+            vali_loss = self.vali(vali_data, vali_loader, criterion)
             test_loss = self.vali(test_data, test_loader, criterion)
 
             # 记录损失值
             self.train_losses.append(train_loss)
             self.test_losses.append(test_loss)
 
-            print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Test Loss: {3:.7f}".format(
-                epoch + 1, train_steps, train_loss, test_loss))
-            early_stopping(test_loss, self.model, path)
+            print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Vali Loss: {3:.7f} Test Loss: {4:.7f}".format(
+                epoch + 1, train_steps, train_loss, vali_loss, test_loss))
+            early_stopping(vali_loss, self.model, path)
             if early_stopping.early_stop:
                 print("Early stopping")
                 break
-            # 在每个epoch结束时保存模型
-            torch.save(self.model.state_dict(), os.path.join(path, 'checkpoint.pth'))
+
             adjust_learning_rate(model_optim, epoch + 1, self.args)
 
-        # 保存损失值和训练指标
+        best_model_path = path + '/' + 'checkpoint.pth'
+        self.model.load_state_dict(torch.load(best_model_path))
+
+        # 保存损失值
         self.save_losses(filename=os.path.join(self.args.checkpoints, setting, "losses.json"))
-        return self.model
+
+        return test_loss
 
     def test(self, setting):
         test_data, test_loader = self._get_data(flag='test')
@@ -336,32 +261,14 @@ class Exp_Informer(Exp_Basic):
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
-        # 计算并记录测试指标
-        mae, mse, rmse, mape, mspe, rse, corr, spearman_corr_val, euclidean_dist_val, dtw_dist_val, r2_score, accuracy = metric(
-            preds, trues)
+        mae, mse, rmse, mape, mspe = metric(preds, trues)
+        print('mse:{}, mae:{}'.format(mse, mae))
 
-        print('\nTest Metrics:')
-        print(f'MAE: {np.mean(mae):.6f}')
-        print(f'MSE: {np.mean(mse):.6f}')
-        print(f'RMSE: {np.mean(rmse):.6f}')
-        print(f'MAPE: {np.mean(mape):.6f}')
-        print(f'MSPE: {np.mean(mspe):.6f}')
-        print(f'RSE: {np.mean(rse):.6f}')
-        print(f'CORR: {np.mean(corr):.6f}')
-        print(f'Spearman: {np.mean(spearman_corr_val):.6f}')
-        print(f'Euclidean: {np.mean(euclidean_dist_val):.6f}')
-        print(f'DTW: {np.mean(dtw_dist_val):.6f}')
-        print(f'R2: {np.mean(r2_score):.6f}')
-        print(f'Accuracy: {np.mean(accuracy):.6f}')
-
-        # 同时保存numpy格式
-        np.save(folder_path + 'test_metrics.npy', np.array(
-            [mae, mse, rmse, mape, mspe, rse, corr, spearman_corr_val, euclidean_dist_val, dtw_dist_val, r2_score,
-             accuracy]))
+        np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
         np.save(folder_path + 'pred.npy', preds)
         np.save(folder_path + 'true.npy', trues)
 
-        return
+        return mse
 
     def predict(self, setting, load=False):
         pred_data, pred_loader = self._get_data(flag='pred')
@@ -423,3 +330,32 @@ class Exp_Informer(Exp_Basic):
         batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
 
         return outputs, batch_y
+
+    def grid_search(self, param_grid):
+        best_loss = float('inf')
+        best_params = None
+
+        for params in ParameterGrid(param_grid):
+            # 更新参数
+            for key, value in params.items():
+                setattr(self.args, key, value)
+
+            # 重新构建模型
+            self.model = self._build_model()
+
+            # 训练模型
+            setting = '_'.join([str(getattr(self.args, attr)) for attr in ['model', 'data', 'features', 'seq_len', 'label_len', 'pred_len']])
+            test_loss = self.train(setting)
+
+            # 评估模型
+            mse = self.test(setting)
+
+            # 记录最佳参数
+            if mse < best_loss:
+                best_loss = mse
+                best_params = params
+
+        print(f"Best parameters: {best_params}")
+        print(f"Best test MSE: {best_loss}")
+
+        return best_params, best_loss

@@ -11,7 +11,7 @@ parser.add_argument('--model', type=str, required=True, default='informer',
 
 parser.add_argument('--data', type=str, required=True, default='custom', help='data')
 parser.add_argument('--root_path', type=str, default='./data/ETT/', help='root path of the data file')
-parser.add_argument('--data_path', type=str, default='qiantangjiang.csv', help='data file')
+parser.add_argument('--data_path', type=str, default='QianTangRiver2020-2024WorkedFull.csv', help='data file')
 parser.add_argument('--features', type=str, default='MS',
                     help='forecasting task, options:[M, S, MS]; M:multivariate predict multivariate, S:univariate predict univariate, MS:multivariate predict univariate')
 parser.add_argument('--target', type=str, default='O2', help='target feature in S or MS task')
@@ -35,16 +35,16 @@ parser.add_argument('--d_ff', type=int, default=2048, help='dimension of fcn')
 parser.add_argument('--factor', type=int, default=5, help='probsparse attn factor')
 parser.add_argument('--padding', type=int, default=0, help='padding type')
 parser.add_argument('--distil', action='store_false',help='whether to use distilling in encoder, using this argument means not using distilling',default=True)
-parser.add_argument('--dropout', type=float, default=0.05, help='dropout')
+parser.add_argument('--dropout', type=float, default=0.3, help='dropout')
 parser.add_argument('--attn', type=str, default='prob', help='attention used in encoder, options:[prob, full]')
 parser.add_argument('--embed', type=str, default='timeF',help='time features encoding, options:[timeF, fixed, learned]')
-parser.add_argument('--activation', type=str, default='gelu', help='activation')
+parser.add_argument('--activation', type=str, default='tanh', help='activation')
 parser.add_argument('--output_attention', action='store_true', help='whether to output attention in encoder')
 parser.add_argument('--do_predict', action='store_true', help='whether to predict unseen future data')
 parser.add_argument('--mix', action='store_false', help='use mix attention in generative decoder', default=True)
 parser.add_argument('--cols', type=str, nargs='+', help='certain cols from the data files as the input features')
 parser.add_argument('--num_workers', type=int, default=0, help='data loader num workers')
-parser.add_argument('--itr', type=int, default=3, help='experiments times')
+parser.add_argument('--itr', type=int, default=1, help='experiments times')
 parser.add_argument('--train_epochs', type=int, default=1000, help='train epochs')
 parser.add_argument('--batch_size', type=int, default=256, help='batch size of train input data')
 parser.add_argument('--patience', type=int, default=30, help='early stopping patience')
@@ -81,6 +81,7 @@ data_parser = {
     '2021': {'data': '2021.csv', 'T': 'WaterQuality', 'M': [10, 10, 10], 'S': [1, 1, 1], 'MS': [10, 10, 1]},
     'qiantangjiang': {'data': 'qiantangjiang.csv', 'T': 'O2', 'M': [5, 5, 5], 'S': [1, 1, 1], 'MS': [5, 5, 1]},
     'QianTangRiver2020-2024WorkedFull': {'data': 'QianTangRiver2020-2024WorkedFull.csv', 'T': 'O2', 'M': [5, 5, 5], 'S': [1, 1, 1], 'MS': [5, 5, 1]},  # 添加这一行
+    'new_data': {'data': 'new_data.csv', 'T': 'O2', 'M': [5, 5, 5], 'S': [1, 1, 1], 'MS': [5, 5, 1]},  # 改为 new_data
 }
 if args.data in data_parser.keys():
     data_info = data_parser[args.data]
