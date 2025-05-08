@@ -1,4 +1,4 @@
-python -u main_informer.py \
+/usr/local/bin/python3.6 -u main_informer.py \
     --model informer \
     --data QianTangRiver2020-2024WorkedFull \
     --attn prob \
