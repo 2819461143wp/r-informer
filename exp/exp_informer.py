@@ -226,7 +226,7 @@ class Exp_Informer(Exp_Basic):
             self.huber = nn.SmoothL1Loss()
 
         def forward(self, pred, true):
-            return self.mse(pred, true) + 0.5 * self.huber(pred, true)
+            return 0.5 * self.mse(pred, true) + 0.5 * self.huber(pred, true)
 
     def _select_criterion(self):
         criterion = self.MixedLoss()
