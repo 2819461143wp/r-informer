@@ -31,18 +31,18 @@ class RelativePositionEmbedding(nn.Module):
         super().__init__()
         self.d_model = d_model
         self.max_len = max_len
-        
+
         # 创建位置编码表
         self.pe = nn.Parameter(torch.zeros(1, max_len, d_model))
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
-        
+
         # 初始化正弦位置编码
         self.pe.data[0, :, 0::2] = torch.sin(position * div_term)
         self.pe.data[0, :, 1::2] = torch.cos(position * div_term)
 
-    def forward(self, seq_len):
-        return self.pe[:, :seq_len, :]
+    def forward(self, x):
+        return self.pe[:, :x.size(1), :]
 
 # 旋转位置编码
 class RotaryPositionEmbedding(nn.Module):
@@ -184,19 +184,30 @@ class DataEmbedding(nn.Module):
 
 
 class DataEmbeddingWithLocalRNN(nn.Module):
-    def __init__(self, c_in, d_model, rnn_type, ksize, dropout=0.1):
+    def __init__(self, c_in, d_model, rnn_type='GRU', ksize=32, dropout=0.1):
         super(DataEmbeddingWithLocalRNN, self).__init__()
         self.value_embedding = TokenEmbedding(c_in, d_model)
-        # self.position_embedding = PositionalEmbedding(d_model)
         self.position_embedding = RelativePositionEmbedding(d_model)
+        # self.position_embedding = RotaryPositionEmbedding(d_model=d_model)
+        # self.position_embedding = PositionalEmbedding(d_model=d_model)
         self.temporal_embedding = TemporalEmbedding(d_model, embed_type='fixed', freq='h')
         self.local_rnn = LocalRNN(d_model, d_model, rnn_type, ksize, dropout)
         self.dropout = nn.Dropout(dropout)
 
     def forward(self, x, x_mark):
-        x = self.value_embedding(x) + self.position_embedding(x) + self.temporal_embedding(x_mark)
+        # 首先进行value embedding
+        value_emb = self.value_embedding(x)
+        # 将position embedding应用到value embedding后的tensor上
+        pos_emb = self.position_embedding(value_emb)
+        # 添加temporal embedding
+        temp_emb = self.temporal_embedding(x_mark)
+        # 组合所有embedding
+        x = value_emb + pos_emb + temp_emb
+        # x = value_emb + temp_emb
+        # 应用local RNN
         x = self.local_rnn(x)
         return self.dropout(x)
+
 
 class LocalRNN(nn.Module):
     def __init__(self, input_size, hidden_size, rnn_type, ksize, dropout=0.1):
