@@ -187,7 +187,8 @@ class DataEmbeddingWithLocalRNN(nn.Module):
     def __init__(self, c_in, d_model, rnn_type, ksize, dropout=0.1):
         super(DataEmbeddingWithLocalRNN, self).__init__()
         self.value_embedding = TokenEmbedding(c_in, d_model)
-        self.position_embedding = PositionalEmbedding(d_model)
+        # self.position_embedding = PositionalEmbedding(d_model)
+        self.position_embedding = RelativePositionEmbedding(d_model)
         self.temporal_embedding = TemporalEmbedding(d_model, embed_type='fixed', freq='h')
         self.local_rnn = LocalRNN(d_model, d_model, rnn_type, ksize, dropout)
         self.dropout = nn.Dropout(dropout)

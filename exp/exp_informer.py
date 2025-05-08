@@ -219,8 +219,17 @@ class Exp_Informer(Exp_Basic):
         model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
         return model_optim
 
+    class MixedLoss(nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.mse = nn.MSELoss()
+            self.huber = nn.SmoothL1Loss()
+
+        def forward(self, pred, true):
+            return self.mse(pred, true) + 0.5 * self.huber(pred, true)
+
     def _select_criterion(self):
-        criterion = nn.MSELoss()
+        criterion = self.MixedLoss()
         return criterion
 
     def vali(self, vali_data, vali_loader, criterion):
