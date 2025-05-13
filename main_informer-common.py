@@ -1,7 +1,6 @@
 import argparse
 import os
 import torch
-import wandb
 
 from exp.exp_informer import Exp_Informer
 
@@ -63,13 +62,6 @@ parser.add_argument('--devices', type=str, default='0,1,2,3',help='device ids of
 
 args = parser.parse_args()
 
-# wandb 初始化
-wandb.init()
-args.model = wandb.config.model
-args.data = wandb.config.data
-args.mse_weight = wandb.config.mse_weight
-args.huber_weight = wandb.config.huber_weight
-
 args.use_gpu = True if torch.cuda.is_available() and args.use_gpu else False
 
 if args.use_gpu and args.use_multi_gpu:
@@ -123,6 +115,3 @@ for ii in range(args.itr):
         exp.predict(setting, True)
 
     torch.cuda.empty_cache()
-
-# 结束当前运行
-wandb.finish()
