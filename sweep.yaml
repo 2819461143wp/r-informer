@@ -1,0 +1,26 @@
+program: /home/msstest/miniconda3/envs/informer/bin/python
+project: water-quality-prediction
+name: d_model_n_heads_sweep
+method: grid
+metric:
+  name: test_r2_score
+  goal: maximize
+parameters:
+  model:
+    value: informer
+  data:
+    value: qiantangjiang
+  mse_weight:
+    values: [0.25, 0.5, 0.75]
+  huber_weight:
+    values: [0.25, 0.5, 0.75]
+
+command:
+  - ${program}
+  - main_informer.py
+  - --data
+  - "data"
+  - --model
+  - "model"
+  - --device
+  - 0
