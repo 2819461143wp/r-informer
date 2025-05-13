@@ -1,6 +1,6 @@
 program: /home/msstest/miniconda3/envs/informer/bin/python
 project: water-quality-prediction
-name: d_model_n_heads_sweep
+name: mse_huber
 method: grid
 metric:
   name: test_r2_score
