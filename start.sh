@@ -12,7 +12,7 @@ for i in 1 2 3; do
     echo "开始执行第 ${i} 次运行..."
 
     # 执行Python命令并同时将输出保存到日志文件
-    python -u main_informer.py \
+    /home/msstest/miniconda3/envs/informer/bin/python -u main_informer.py \
         --model informer \
         --data qiantangjiang \
         --freq h \
