@@ -1,5 +1,3 @@
-#!/bin/bash
-
 # 创建logs目录（如果不存在）
 mkdir -p logs
 
