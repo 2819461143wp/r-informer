@@ -188,8 +188,8 @@ class DataEmbeddingWithLocalRNN(nn.Module):
         super(DataEmbeddingWithLocalRNN, self).__init__()
         self.value_embedding = TokenEmbedding(c_in, d_model)
         # self.position_embedding = RelativePositionEmbedding(d_model)
-        self.position_embedding = RotaryPositionEmbedding(d_model=d_model)
-        # self.position_embedding = PositionalEmbedding(d_model=d_model)
+        # self.position_embedding = RotaryPositionEmbedding(d_model=d_model)
+        self.position_embedding = PositionalEmbedding(d_model=d_model)
         self.temporal_embedding = TemporalEmbedding(d_model, embed_type='fixed', freq='h')
         self.local_rnn = LocalRNN(d_model, d_model, rnn_type, ksize, dropout)
         self.dropout = nn.Dropout(dropout)
@@ -202,8 +202,8 @@ class DataEmbeddingWithLocalRNN(nn.Module):
         # 添加temporal embedding
         temp_emb = self.temporal_embedding(x_mark)
         # 组合所有embedding
-        x = value_emb + pos_emb + temp_emb
-        # x = value_emb + temp_emb
+        # x = value_emb + pos_emb + temp_emb
+        x = value_emb + temp_emb
         # 应用local RNN
         x = self.local_rnn(x)
         return self.dropout(x)
