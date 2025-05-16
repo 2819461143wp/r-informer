@@ -150,7 +150,8 @@ class Exp_Informer(Exp_Basic):
             return self.mse_weight * self.mse(pred, true) + self.huber_weight * self.huber(pred, true)
 
     def _select_criterion(self):
-        criterion = self.MixedLoss(mse_weight=self.args.mse_weight, huber_weight=self.args.huber_weight)
+        # criterion = self.MixedLoss(mse_weight=self.args.mse_weight, huber_weight=self.args.huber_weight)
+        criterion = nn.MSELoss()
         return criterion
 
     def vali(self, vali_data, vali_loader, criterion):
