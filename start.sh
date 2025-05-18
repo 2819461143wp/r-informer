@@ -19,6 +19,7 @@ for i in 1 2 3; do
         --data qiantangjiang \
         --freq h \
         --itr 1 \
+        --do_predict \
         --device 0 2>&1 | tee "$logfile"
 
     echo "第 ${i} 次运行完成。日志已保存到: $logfile"
