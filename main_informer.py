@@ -43,7 +43,7 @@ parser.add_argument('--mix', action='store_false', help='use mix attention in ge
 parser.add_argument('--cols', type=str, nargs='+', help='certain cols from the data files as the input features')
 parser.add_argument('--num_workers', type=int, default=0, help='data loader num workers')
 parser.add_argument('--itr', type=int, default=1, help='experiments times')
-parser.add_argument('--train_epochs', type=int, default=200, help='train epochs')
+parser.add_argument('--train_epochs', type=int, default=1000, help='train epochs')
 parser.add_argument('--batch_size', type=int, default=256, help='batch size of train input data')
 parser.add_argument('--patience', type=int, default=30, help='early stopping patience')
 parser.add_argument('--learning_rate', type=float, default=0.0001, help='optimizer learning rate')

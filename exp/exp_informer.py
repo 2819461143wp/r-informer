@@ -286,10 +286,10 @@ class Exp_Informer(Exp_Basic):
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Test Loss: {3:.7f}".format(
                 epoch + 1, train_steps, train_loss, test_loss))
             print(f"MAE: {mae:.4f}, MSE: {mse:.4f}, RMSE: {rmse:.4f}, MAPE: {mape:.4f}, R2: {r2_score:.4f}")
-            early_stopping(test_loss, self.model, path)
-            if early_stopping.early_stop:
-                print("Early stopping")
-                break
+            # early_stopping(test_loss, self.model, path)
+            # if early_stopping.early_stop:
+            #     print("Early stopping")
+            #     break
 
             adjust_learning_rate(model_optim, epoch+1, self.args)
 
