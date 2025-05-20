@@ -25,7 +25,8 @@ class Exp_Informer(Exp_Basic):
     def __init__(self, args):
         super(Exp_Informer, self).__init__(args)
         self.train_losses = []  # 存储每个 epoch 的训练损失
-        self.test_losses = []  # 存储每个 epoch 的测试损失
+        self.vali_losses = []   # 存储每个 epoch 的验证损失
+        self.test_losses = []   # 存储每个 epoch 的测试损失
         self.mse_train = []  # 存储每个 epoch 的训练 mse
         self.mse_test = []  # 存储每个 epoch 的测试 mse
         self.mae_train = []  # 存储每个 epoch 的训练 mae
@@ -68,6 +69,7 @@ class Exp_Informer(Exp_Basic):
         """将训练和测试损失保存到文件中"""
         losses_dict = {
             "train_losses": self.train_losses,
+            "vali_losses": self.vali_losses,
             "test_losses": self.test_losses
         }
 
@@ -229,7 +231,8 @@ class Exp_Informer(Exp_Basic):
             return 0.5 * self.mse(pred, true) + 0.5 * self.huber(pred, true)
 
     def _select_criterion(self):
-        criterion = self.MixedLoss()
+        # criterion = self.MixedLoss()
+        criterion = nn.MSELoss()
         return criterion
 
     def vali(self, vali_data, vali_loader, criterion):
@@ -246,7 +249,7 @@ class Exp_Informer(Exp_Basic):
 
     def train(self, setting):
         train_data, train_loader = self._get_data(flag='train')
-        # vali_data, vali_loader = self._get_data(flag = 'val')
+        vali_data, vali_loader = self._get_data(flag = 'val')
         test_data, test_loader = self._get_data(flag='test')
 
         path = os.path.join(self.args.checkpoints, setting)
@@ -298,11 +301,12 @@ class Exp_Informer(Exp_Basic):
 
             print("Epoch: {} cost time: {}".format(epoch + 1, time.time() - epoch_time))
             train_loss = np.average(train_loss)
-            # vali_loss = self.vali(vali_data, vali_loader, criterion)
+            vali_loss = self.vali(vali_data, vali_loader, criterion)
             test_loss = self.vali(test_data, test_loader, criterion)
 
             # 记录损失值
             self.train_losses.append(train_loss)
+            self.vali_losses.append(vali_loss)
             self.test_losses.append(test_loss)
 
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Test Loss: {3:.7f}".format(

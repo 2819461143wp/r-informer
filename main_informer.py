@@ -19,9 +19,9 @@ parser.add_argument('--freq', type=str, default='h',
                     help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h')
 parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='location of model checkpoints')
 
-parser.add_argument('--seq_len', type=int, default=96, help='input sequence length of Informer encoder')
-parser.add_argument('--label_len', type=int, default=48, help='start token length of Informer decoder')
-parser.add_argument('--pred_len', type=int, default=24, help='prediction sequence length')
+parser.add_argument('--seq_len', type=int, default=336, help='input sequence length of Informer encoder')
+parser.add_argument('--label_len', type=int, default=168, help='start token length of Informer decoder')
+parser.add_argument('--pred_len', type=int, default=84 , help='prediction sequence length')
 
 parser.add_argument('--enc_in', type=int, default=10, help='encoder input size')
 parser.add_argument('--dec_in', type=int, default=10, help='decoder input size')
@@ -64,12 +64,12 @@ args = parser.parse_args()
 
 args.use_gpu = True if torch.cuda.is_available() and args.use_gpu else False
 
-if args.use_gpu and args.use_multi_gpu:
-    args.devices = args.devices.replace(' ', '')
-    device_ids = args.devices.split(',')
-    args.device_ids = [int(id_) for id_ in device_ids]
-    args.gpu = args.device_ids[0]
-
+if args.use_gpu:
+    args.gpu = 0  # 修改显卡 ID 为 0
+    if args.use_multi_gpu:
+        args.devices = '0'  # 修改多显卡设备为仅使用 ID 为 0 的显卡
+        device_ids = args.devices.split(',')
+        args.device_ids = [int(id_) for id_ in device_ids]
 data_parser = {
     'ETTh1': {'data': 'ETTh1.csv', 'T': 'OT', 'M': [7, 7, 7], 'S': [1, 1, 1], 'MS': [7, 7, 1]},
     'ETTh2': {'data': 'ETTh2.csv', 'T': 'OT', 'M': [7, 7, 7], 'S': [1, 1, 1], 'MS': [7, 7, 1]},
