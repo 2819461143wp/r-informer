@@ -133,7 +133,7 @@ args.loss = 'mse'  # 损失函数
 args.lradj = 'type1'  # 学习率调整方式
 
 # GPU 设置
-args.use_gpu = False  # 不使用 GPU，强制使用 CPU
+args.use_gpu = True  # 不使用 GPU，强制使用 CPU
 args.gpu = 0  # GPU 设备 ID（不使用）
 args.use_multi_gpu = False  # 不使用多 GPU
 args.devices = '0,1,2,3'  # 多 GPU 设备 ID（不使用）
