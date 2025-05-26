@@ -5,6 +5,84 @@ import numpy as np
 import matplotlib.pyplot as plt
 from exp.exp_informer import Exp_Informer
 from utils.tools import dotdict
+from utils.metrics import metric # 新增导入
+
+# 新增的 test 函数
+def test_model_performance(experiment, settings_str, arguments):
+    print('>>>>>>>开始测试<<<<<<<<<<<<<<<<<<<<<<<<')
+    # 注意：这里的 _get_data 会根据 arguments.batch_size 加载数据
+    test_data_obj, test_data_loader = experiment._get_data(flag='test')
+    
+    if len(test_data_loader) == 0:
+        print("警告: 测试数据加载器为空，无法执行测试。请检查测试数据集或批处理大小。")
+        print('>>>>>>>测试跳过（无数据）<<<<<<<<<<<<<<<<<<<<<<<<')
+        return
+
+    experiment.model.eval()
+    
+    predictions_list = []
+    ground_truths_list = []
+    
+    with torch.no_grad(): # 测试时不需要计算梯度
+        for i, (batch_x_data, batch_y_data, batch_x_timestamps, batch_y_timestamps) in enumerate(test_data_loader):
+            prediction_output, ground_truth_output = experiment._process_one_batch(
+                test_data_obj, batch_x_data, batch_y_data, batch_x_timestamps, batch_y_timestamps)
+            predictions_list.append(prediction_output.detach().cpu().numpy())
+            ground_truths_list.append(ground_truth_output.detach().cpu().numpy())
+
+    if not predictions_list:
+        print("警告: 未收集到预测结果（测试数据加载后列表仍为空），无法计算指标。")
+        print('>>>>>>>测试完成（无预测结果）<<<<<<<<<<<<<<<<<<<<<<<<')
+        return
+
+    predictions_arr = np.array(predictions_list)
+    ground_truths_arr = np.array(ground_truths_list)
+    
+    # predictions_arr 的形状是 (num_batches, batch_size, pred_len, c_out)
+    # ground_truths_arr 的形状是 (num_batches, batch_size, pred_len, c_out)
+    # 我们需要将其 reshape 为 (total_samples, pred_len, c_out)
+    predictions_arr = predictions_arr.reshape(-1, predictions_arr.shape[-2], predictions_arr.shape[-1])
+    ground_truths_arr = ground_truths_arr.reshape(-1, ground_truths_arr.shape[-2], ground_truths_arr.shape[-1])
+
+    print('测试集形状 (预测值, 真实值):', predictions_arr.shape, ground_truths_arr.shape)
+
+    if predictions_arr.shape[0] != ground_truths_arr.shape[0]:
+        print(f"警告: 预测 ({predictions_arr.shape[0]}) 和真实 ({ground_truths_arr.shape[0]}) 样本数量不匹配。跳过指标计算。")
+        print('>>>>>>>测试完成（样本数量不匹配）<<<<<<<<<<<<<<<<<<<<<<<<')
+        return
+    
+    if predictions_arr.shape[0] == 0:
+        print("警告: 重塑后的预测数组为空（没有有效样本），无法计算指标。")
+        print('>>>>>>>测试完成（无有效样本）<<<<<<<<<<<<<<<<<<<<<<<<')
+        return
+
+    # 从 metric 函数获取指标
+    # metric 函数返回: mae, mse, rmse, mape, mspe, rse, corr, spearman_corr_val, euclidean_dist_val, dtw_dist_val, r2_score, accuracy
+    metrics_output = metric(predictions_arr, ground_truths_arr)
+    mae, mse, rmse, mape, mspe, rse, corr, spearman_corr_val, euclidean_dist_val, dtw_dist_val, r2, accuracy = metrics_output
+    
+    print(f'测试集指标:')
+    print(f'  RMSE: {rmse:.4f}')
+    print(f'  MAE:  {mae:.4f}')
+    print(f'  MSE:  {mse:.4f}')
+    print(f'  R2:   {r2:.4f}') # r2 对应 metric 函数返回的 r2_score
+    print(f'  MAPE: {mape:.4f}')
+    
+    results_folder_path = './results/' + settings_str + '/'
+    if not os.path.exists(results_folder_path):
+        os.makedirs(results_folder_path)
+    
+    np.save(results_folder_path + 'test_set_predictions.npy', predictions_arr)
+    np.save(results_folder_path + 'test_set_ground_truths.npy', ground_truths_arr)
+    
+    test_metrics_summary = {
+        'RMSE': rmse, 'MAE': mae, 'MSE': mse, 'R2': r2, 'MAPE': mape
+    }
+    with open(results_folder_path + 'test_set_metrics_summary.txt', 'w') as f:
+        for metric_name, metric_value in test_metrics_summary.items():
+            f.write(f'{metric_name}: {metric_value:.4f}\n')
+    print(f'测试集预测和指标已保存至: {results_folder_path}')
+    print('>>>>>>>测试完成<<<<<<<<<<<<<<<<<<<<<<<<')
 
 # 设置参数
 args = dotdict()
@@ -29,7 +107,7 @@ args.pred_len = 24  # 预测序列长度
 args.enc_in = 5  # 编码器输入维度 (根据 qiantangjiang 数据集)
 args.dec_in = 5  # 解码器输入维度 (根据 qiantangjiang 数据集)
 args.c_out = 1  # 输出维度 (根据 features='MS')
-args.d_model = 64  # 模型维度，调整为与权重文件一致
+args.d_model = 128  # 模型维度，调整为与权重文件一致
 args.n_heads = 8  # 注意力头数
 args.e_layers = 2  # 编码器层数
 args.d_layers = 1  # 解码器层数
@@ -70,7 +148,7 @@ exp = Exp_Informer(args)
 # 执行预测
 print('>>>>>>>开始预测<<<<<<<<<<<<<<<<<<<<<<<<')
 # 加载特定权重文件
-checkpoint_path = '/Users/andyhuang/Desktop/r-informer/checkpoints/checkpoint TEST3.pth'
+checkpoint_path = '/Users/andyhuang/Desktop/r-informer/checkpoints/checkpoint.pth'
 if os.path.exists(checkpoint_path):
     state_dict = torch.load(checkpoint_path, map_location=torch.device('cpu'))
     # 去除 DataParallel 前缀 'module.'，以便在CPU设备加载权重
@@ -123,3 +201,7 @@ plt.close()
 print(f'预测曲线图已保存至: {folder_path}prediction_plot.png')
 
 print('>>>>>>>预测完成<<<<<<<<<<<<<<<<<<<<<<<<')
+
+# 执行测试
+# 确保 exp, setting, 和 args 在此作用域内可用
+test_model_performance(exp, setting, args)
