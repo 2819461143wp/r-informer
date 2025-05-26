@@ -136,7 +136,8 @@ class Exp_Informer(Exp_Basic):
 
     def _select_optimizer(self):
         # model_optim = optim.Adam(self.model.parameters(), lr=self.args.learning_rate)
-        model_optim = optim.SGD(self.model.parameters(), lr=self.args.learning_rate)
+        # model_optim = optim.SGD(self.model.parameters(), lr=self.args.learning_rate)
+        model_optim = optim.RMSprop(self.model.parameters(), lr=self.args.learning_rate)
         return model_optim
     
     class MixedLoss(nn.Module):
