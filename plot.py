@@ -197,7 +197,6 @@ def plot_prediction_vs_true(pred_path, true_path, data_path, save_path=None):
         'metrics': metrics
     }
 
-# 使用示例
 best_fit_data = plot_prediction_vs_true(
     'pred.npy',
     'true.npy',
