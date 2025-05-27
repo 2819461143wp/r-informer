@@ -20,7 +20,7 @@ class Informer(nn.Module):
         self.attn = attn
         self.output_attention = output_attention
 
-        # Encoding
+        # Encoding1
         self.enc_embedding = DataEmbeddingWithLocalRNN(enc_in, d_model, rnn_type='LSTM', ksize=7, dropout=dropout)
         self.dec_embedding = DataEmbeddingWithLocalRNN(dec_in, d_model, rnn_type='LSTM', ksize=7, dropout=dropout)
         # self.enc_embedding = DataEmbedding(enc_in, d_model, embed, freq, dropout)
