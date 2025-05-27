@@ -248,6 +248,8 @@ class Exp_Informer(Exp_Basic):
         train_data, train_loader = self._get_data(flag='train')
         # vali_data, vali_loader = self._get_data(flag = 'val')
         test_data, test_loader = self._get_data(flag='test')
+        best_test_loss = float('inf')
+        best_epoch = 0
 
         path = os.path.join(self.args.checkpoints, setting)
         if not os.path.exists(path):
@@ -256,7 +258,7 @@ class Exp_Informer(Exp_Basic):
         time_now = time.time()
 
         train_steps = len(train_loader)
-        early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)
+        # early_stopping = EarlyStopping(patience=self.args.patience, verbose=True)
 
         model_optim = self._select_optimizer()
         criterion = self._select_criterion()
@@ -307,10 +309,10 @@ class Exp_Informer(Exp_Basic):
 
             print("Epoch: {0}, Steps: {1} | Train Loss: {2:.7f} Test Loss: {3:.7f}".format(
                 epoch + 1, train_steps, train_loss, test_loss))
-            early_stopping(test_loss, self.model, path)
-            if early_stopping.early_stop:
-                print("Early stopping")
-                break
+            # early_stopping(test_loss, self.model, path)
+            # if early_stopping.early_stop:
+            #     print("Early stopping")
+            #     break
             # 在每个epoch结束时保存模型
             torch.save(self.model.state_dict(), os.path.join(path, 'checkpoint.pth'))
             adjust_learning_rate(model_optim, epoch + 1, self.args)

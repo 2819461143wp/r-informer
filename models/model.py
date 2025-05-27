@@ -8,6 +8,7 @@ from models.decoder import Decoder, DecoderLayer
 from models.attn import FullAttention, ProbAttention, AttentionLayer
 from models.embed import DataEmbedding
 from models.embed import DataEmbeddingWithLocalRNN
+from utils.RevIN import RevIN
 
 class Informer(nn.Module):
     def __init__(self, enc_in, dec_in, c_out, seq_len, label_len, out_len,
@@ -20,9 +21,12 @@ class Informer(nn.Module):
         self.attn = attn
         self.output_attention = output_attention
 
+
+        self.revin_layer = RevIN(num_features=enc_in)
+
         # Encoding
-        self.enc_embedding = DataEmbeddingWithLocalRNN(enc_in, d_model, rnn_type='LSTM', ksize=6, dropout=dropout)
-        self.dec_embedding = DataEmbeddingWithLocalRNN(dec_in, d_model, rnn_type='LSTM', ksize=6, dropout=dropout)
+        self.enc_embedding = DataEmbeddingWithLocalRNN(enc_in, d_model, rnn_type='LSTM', ksize=7, dropout=dropout)
+        self.dec_embedding = DataEmbeddingWithLocalRNN(dec_in, d_model, rnn_type='LSTM', ksize=7, dropout=dropout)
         # self.enc_embedding = DataEmbedding(enc_in, d_model, embed, freq, dropout)
         # self.dec_embedding = DataEmbedding(dec_in, d_model, embed, freq, dropout)
 
@@ -70,19 +74,43 @@ class Informer(nn.Module):
 
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec,
                 enc_self_mask=None, dec_self_mask=None, dec_enc_mask=None):
-        enc_out = self.enc_embedding(x_enc, x_mark_enc)
+
+        # 对输入数据进行归一化
+        x_enc_normalized = self.revin_layer(x_enc, mode='norm')
+        
+        # 使用归一化后的数据进行嵌入和编码解码
+        enc_out = self.enc_embedding(x_enc_normalized, x_mark_enc)
         enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)
 
         dec_out = self.dec_embedding(x_dec, x_mark_dec)
         dec_out = self.decoder(dec_out, enc_out, x_mask=dec_self_mask, cross_mask=dec_enc_mask)
         dec_out = self.projection(dec_out)
 
+        # enc_out = self.enc_embedding(x_enc, x_mark_enc)
+        # enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)
+
+        # dec_out = self.dec_embedding(x_dec, x_mark_dec)
+        # dec_out = self.decoder(dec_out, enc_out, x_mask=dec_self_mask, cross_mask=dec_enc_mask)
+        # dec_out = self.projection(dec_out)
+
         # dec_out = self.end_conv1(dec_out)
         # dec_out = self.end_conv2(dec_out.transpose(2,1)).transpose(1,2)
+
+        # if self.output_attention:
+        #     return dec_out[:,-self.pred_len:,:], attns
+        # else:
+        #     return dec_out[:,-self.pred_len:,:] # [B, L, D]
+        
+        # 获取预测结果部分
+        pred_out = dec_out[:,-self.pred_len:,:]
+        
+        # 对输出进行反归一化
+        pred_out = self.revin_layer(pred_out, mode='denorm')
+        
         if self.output_attention:
-            return dec_out[:,-self.pred_len:,:], attns
+            return pred_out, attns
         else:
-            return dec_out[:,-self.pred_len:,:] # [B, L, D]
+            return pred_out  # [B, L, D]
 
 
 class InformerStack(nn.Module):
@@ -97,8 +125,8 @@ class InformerStack(nn.Module):
         self.output_attention = output_attention
 
         # Encoding
-        self.enc_embedding = DataEmbeddingWithLocalRNN(enc_in, d_model, rnn_type='LSTM', ksize=6, dropout=dropout)
-        self.dec_embedding = DataEmbeddingWithLocalRNN(dec_in, d_model, rnn_type='LSTM', ksize=6, dropout=dropout)
+        self.enc_embedding = DataEmbeddingWithLocalRNN(enc_in, d_model, rnn_type='LSTM', ksize=7, dropout=dropout)
+        self.dec_embedding = DataEmbeddingWithLocalRNN(dec_in, d_model, rnn_type='LSTM', ksize=7, dropout=dropout)
         # self.enc_embedding = DataEmbedding(enc_in, d_model, embed, freq, dropout)
         # self.dec_embedding = DataEmbedding(dec_in, d_model, embed, freq, dropout)
         # Attention

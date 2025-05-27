@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import Tuple
 import math
+from utils.RevIN import RevIN
 
 #三角式绝对位置编码
 class PositionalEmbedding(nn.Module):
@@ -242,4 +243,5 @@ class LocalRNN(nn.Module):
 
         outputs = torch.cat(outputs, dim=1)
         outputs = outputs[:, :seq_len, :]
+
         return self.dropout(outputs)
