@@ -134,10 +134,10 @@ def metric(preds, trues):
     corr = CORR(preds, trues)
     # huber_loss = huber(preds, trues, 1.0)
     # log_cosh = log_cosh_loss(preds, trues)
-    spearman_corr_val = spearman_corr(preds, trues)
-    euclidean_dist_val = euclidean_dist(preds, trues)
+    # spearman_corr_val = spearman_corr(preds, trues)
+    # euclidean_dist_val = euclidean_dist(preds, trues)
     dtw_dist_val = dtw_dist(preds, trues)
     r2_score = R2(preds, trues)
     accuracy = calculate_accuracy(preds, trues)
 
-    return mae, mse, rmse, mape, mspe, rse, corr, spearman_corr_val, euclidean_dist_val, dtw_dist_val, r2_score, accuracy
+    return mae, mse, rmse, mape, mspe, rse, corr, dtw_dist_val, r2_score, accuracy
