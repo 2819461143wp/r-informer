@@ -349,7 +349,7 @@ class Exp_Informer(Exp_Basic):
             os.makedirs(folder_path)
 
         # 计算并记录测试指标
-        mae, mse, rmse, mape, mspe, rse, corr, spearman_corr_val, euclidean_dist_val, dtw_dist_val, r2_score, accuracy = metric(
+        mae, mse, rmse, mape, mspe, rse, corr, dtw_dist_val, r2_score, accuracy = metric(
             preds, trues)
 
         print('\nTest Metrics:')
@@ -360,15 +360,15 @@ class Exp_Informer(Exp_Basic):
         print(f'MSPE: {np.mean(mspe):.6f}')
         print(f'RSE: {np.mean(rse):.6f}')
         print(f'CORR: {np.mean(corr):.6f}')
-        print(f'Spearman: {np.mean(spearman_corr_val):.6f}')
-        print(f'Euclidean: {np.mean(euclidean_dist_val):.6f}')
+        # print(f'Spearman: {np.mean(spearman_corr_val):.6f}')
+        # print(f'Euclidean: {np.mean(euclidean_dist_val):.6f}')
         print(f'DTW: {np.mean(dtw_dist_val):.6f}')
         print(f'R2: {np.mean(r2_score):.6f}')
         print(f'Accuracy: {np.mean(accuracy):.6f}')
 
         # 同时保存numpy格式
         np.save(folder_path + 'test_metrics.npy', np.array(
-            [mae, mse, rmse, mape, mspe, rse, corr, spearman_corr_val, euclidean_dist_val, dtw_dist_val, r2_score,
+            [mae, mse, rmse, mape, mspe, rse, corr, dtw_dist_val, r2_score,
              accuracy]))
         np.save(folder_path + 'pred.npy', preds)
         np.save(folder_path + 'true.npy', trues)
