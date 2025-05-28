@@ -370,8 +370,8 @@ class Exp_Informer(Exp_Basic):
         np.save(folder_path + 'test_metrics.npy', np.array(
             [mae, mse, rmse, mape, mspe, rse, corr,dtw_dist_val, r2_score,
              accuracy]))
-        np.save(folder_path + 'pred.npy', preds)
-        np.save(folder_path + 'true.npy', trues)
+        np.save(folder_path + 'pred-r-informer.npy', preds)
+        np.save(folder_path + 'true-r-informer.npy', trues)
 
         return
 

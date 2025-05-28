@@ -265,8 +265,8 @@ class Exp_Informer(Exp_Basic):
         print('mse:{}, mae:{}'.format(mse, mae))
 
         np.save(folder_path + 'metrics.npy', np.array([mae, mse, rmse, mape, mspe]))
-        np.save(folder_path + 'pred.npy', preds)
-        np.save(folder_path + 'true.npy', trues)
+        np.save(folder_path + 'pred-r-informer.npy', preds)
+        np.save(folder_path + 'true-r-informer.npy', trues)
 
         return mse
 
