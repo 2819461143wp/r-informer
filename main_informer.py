@@ -19,6 +19,9 @@ parser.add_argument('--freq', type=str, default='h',
                     help='freq for time features encoding, options:[s:secondly, t:minutely, h:hourly, d:daily, b:business days, w:weekly, m:monthly], you can also use more detailed freq like 15min or 3h')
 parser.add_argument('--checkpoints', type=str, default='./checkpoints/', help='location of model checkpoints')
 
+parser.add_argument('--task_type', type=str, default='prediction', help='task type, options:[prediction, classification]')
+parser.add_argument('--num_classes', type=int, default=5, help='number of classes for classification task')
+
 parser.add_argument('--seq_len', type=int, default=96, help='input sequence length of Informer encoder')
 parser.add_argument('--label_len', type=int, default=48, help='start token length of Informer decoder')
 parser.add_argument('--pred_len', type=int, default=24, help='prediction sequence length')
@@ -82,6 +85,7 @@ data_parser = {
     'qiantangjiang': {'data': 'qiantangjiang.csv', 'T': 'O2', 'M': [5, 5, 5], 'S': [1, 1, 1], 'MS': [5, 5, 1]},
     'QianTangRiver2020-2024WorkedFull': {'data': 'QianTangRiver2020-2024WorkedFull.csv', 'T': 'O2', 'M': [5, 5, 5], 'S': [1, 1, 1], 'MS': [5, 5, 1]},  # 添加这一行
     'new_data': {'data': 'new_data.csv', 'T': 'O2', 'M': [5, 5, 5], 'S': [1, 1, 1], 'MS': [5, 5, 1]},  # 改为 new_data
+    'sensor_data': {'data': 'sensor_data_20240601.csv', 'T': 'abnormal_type', 'M': [13, 13, 6], 'S': [1, 1, 1], 'MS': [13, 13, 1]},
 }
 if args.data in data_parser.keys():
     data_info = data_parser[args.data]

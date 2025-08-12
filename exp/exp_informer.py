@@ -6,6 +6,7 @@ from utils.tools import EarlyStopping, adjust_learning_rate
 from utils.metrics import metric
 
 import numpy as np
+from sklearn.metrics import accuracy_score, precision_recall_fscore_support, classification_report
 
 import torch
 import torch.nn as nn
@@ -151,7 +152,9 @@ class Exp_Informer(Exp_Basic):
                 self.args.output_attention,
                 self.args.distil,
                 self.args.mix,
-                self.device
+                self.device,
+                self.args.task_type,
+                self.args.num_classes
             ).float()
 
         if self.args.use_multi_gpu and self.args.use_gpu:
@@ -173,6 +176,7 @@ class Exp_Informer(Exp_Basic):
             'qiantangjiang': Dataset_Custom,
             'QianTangRiver2020-2024WorkedFull': Dataset_Custom,
             'new_data': Dataset_Custom,
+            'sensor_data': Dataset_Custom,
         }
         Data = data_dict[self.args.data]
         timeenc = 0 if args.embed != 'timeF' else 1
@@ -203,7 +207,8 @@ class Exp_Informer(Exp_Basic):
             inverse=args.inverse,
             timeenc=timeenc,
             freq=freq,
-            cols=args.cols
+            cols=args.cols,
+            task_type=args.task_type
         )
         print(flag, len(data_set))
         data_loader = DataLoader(
@@ -220,7 +225,10 @@ class Exp_Informer(Exp_Basic):
         return model_optim
 
     def _select_criterion(self):
-        criterion = nn.MSELoss()
+        if self.args.task_type == 'classification':
+            criterion = nn.CrossEntropyLoss()
+        else:
+            criterion = nn.MSELoss()
         return criterion
 
     def vali(self, vali_data, vali_loader, criterion):
@@ -324,42 +332,68 @@ class Exp_Informer(Exp_Basic):
             preds.append(pred.detach().cpu().numpy())
             trues.append(true.detach().cpu().numpy())
 
-        preds = np.array(preds)
-        trues = np.array(trues)
-        print('test shape:', preds.shape, trues.shape)
-        preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
-        trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
-        print('test shape:', preds.shape, trues.shape)
+        if self.args.task_type == 'classification':
+            preds = np.concatenate(preds, axis=0)
+            trues = np.concatenate(trues, axis=0)
+            pred_labels = np.argmax(preds, axis=1)
+            
+            accuracy = accuracy_score(trues, pred_labels)
+            precision, recall, f1, _ = precision_recall_fscore_support(trues, pred_labels, average='weighted')
+            
+            print('\nClassification Metrics:')
+            print(f'Accuracy: {accuracy:.6f}')
+            print(f'Precision: {precision:.6f}')
+            print(f'Recall: {recall:.6f}')
+            print(f'F1 Score: {f1:.6f}')
+            
+            report = classification_report(trues, pred_labels)
+            print('\nClassification Report:')
+            print(report)
 
-        # result save
-        folder_path = './results/' + setting + '/'
-        if not os.path.exists(folder_path):
-            os.makedirs(folder_path)
+            folder_path = './results/' + setting + '/'
+            if not os.path.exists(folder_path):
+                os.makedirs(folder_path)
+            
+            with open(os.path.join(folder_path, 'classification_report.txt'), 'w') as f:
+                f.write(report)
 
-        # 计算并记录测试指标
-        mae, mse, rmse, mape, mspe, rse, corr, spearman_corr_val, euclidean_dist_val, dtw_dist_val, r2_score, accuracy = metric(
-            preds, trues)
+        else:
+            preds = np.array(preds)
+            trues = np.array(trues)
+            print('test shape:', preds.shape, trues.shape)
+            preds = preds.reshape(-1, preds.shape[-2], preds.shape[-1])
+            trues = trues.reshape(-1, trues.shape[-2], trues.shape[-1])
+            print('test shape:', preds.shape, trues.shape)
 
-        print('\nTest Metrics:')
-        print(f'MAE: {np.mean(mae):.6f}')
-        print(f'MSE: {np.mean(mse):.6f}')
-        print(f'RMSE: {np.mean(rmse):.6f}')
-        print(f'MAPE: {np.mean(mape):.6f}')
-        print(f'MSPE: {np.mean(mspe):.6f}')
-        print(f'RSE: {np.mean(rse):.6f}')
-        print(f'CORR: {np.mean(corr):.6f}')
-        print(f'Spearman: {np.mean(spearman_corr_val):.6f}')
-        print(f'Euclidean: {np.mean(euclidean_dist_val):.6f}')
-        print(f'DTW: {np.mean(dtw_dist_val):.6f}')
-        print(f'R2: {np.mean(r2_score):.6f}')
-        print(f'Accuracy: {np.mean(accuracy):.6f}')
+            # result save
+            folder_path = './results/' + setting + '/'
+            if not os.path.exists(folder_path):
+                os.makedirs(folder_path)
 
-        # 同时保存numpy格式
-        np.save(folder_path + 'test_metrics.npy', np.array(
-            [mae, mse, rmse, mape, mspe, rse, corr, spearman_corr_val, euclidean_dist_val, dtw_dist_val, r2_score,
-             accuracy]))
-        np.save(folder_path + 'pred.npy', preds)
-        np.save(folder_path + 'true.npy', trues)
+            # 计算并记录测试指标
+            mae, mse, rmse, mape, mspe, rse, corr, spearman_corr_val, euclidean_dist_val, dtw_dist_val, r2_score, accuracy = metric(
+                preds, trues)
+
+            print('\nTest Metrics:')
+            print(f'MAE: {np.mean(mae):.6f}')
+            print(f'MSE: {np.mean(mse):.6f}')
+            print(f'RMSE: {np.mean(rmse):.6f}')
+            print(f'MAPE: {np.mean(mape):.6f}')
+            print(f'MSPE: {np.mean(mspe):.6f}')
+            print(f'RSE: {np.mean(rse):.6f}')
+            print(f'CORR: {np.mean(corr):.6f}')
+            print(f'Spearman: {np.mean(spearman_corr_val):.6f}')
+            print(f'Euclidean: {np.mean(euclidean_dist_val):.6f}')
+            print(f'DTW: {np.mean(dtw_dist_val):.6f}')
+            print(f'R2: {np.mean(r2_score):.6f}')
+            print(f'Accuracy: {np.mean(accuracy):.6f}')
+
+            # 同时保存numpy格式
+            np.save(folder_path + 'test_metrics.npy', np.array(
+                [mae, mse, rmse, mape, mspe, rse, corr, spearman_corr_val, euclidean_dist_val, dtw_dist_val, r2_score,
+                 accuracy]))
+            np.save(folder_path + 'pred.npy', preds)
+            np.save(folder_path + 'true.npy', trues)
 
         return
 
@@ -394,32 +428,46 @@ class Exp_Informer(Exp_Basic):
 
     def _process_one_batch(self, dataset_object, batch_x, batch_y, batch_x_mark, batch_y_mark):
         batch_x = batch_x.float().to(self.device)
-        batch_y = batch_y.float()
-
         batch_x_mark = batch_x_mark.float().to(self.device)
-        batch_y_mark = batch_y_mark.float().to(self.device)
 
-        # decoder input
-        if self.args.padding == 0:
-            dec_inp = torch.zeros([batch_y.shape[0], self.args.pred_len, batch_y.shape[-1]]).float()
-        elif self.args.padding == 1:
-            dec_inp = torch.ones([batch_y.shape[0], self.args.pred_len, batch_y.shape[-1]]).float()
-        dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
-        # encoder - decoder
-        if self.args.use_amp:
-            with torch.cuda.amp.autocast():
+        if self.args.task_type == 'classification':
+            batch_y = batch_y.long().to(self.device)
+            
+            if self.args.use_amp:
+                with torch.cuda.amp.autocast():
+                    outputs = self.model(batch_x, batch_x_mark, None, None)
+            else:
+                outputs = self.model(batch_x, batch_x_mark, None, None)
+            
+            return outputs, batch_y
+        else:
+            batch_y = batch_y.float()
+            batch_y_mark = batch_y_mark.float().to(self.device)
+
+            # decoder input
+            if self.args.padding == 0:
+                dec_inp = torch.zeros([batch_y.shape[0], self.args.pred_len, batch_y.shape[-1]]).float()
+            elif self.args.padding == 1:
+                dec_inp = torch.ones([batch_y.shape[0], self.args.pred_len, batch_y.shape[-1]]).float()
+            dec_inp = torch.cat([batch_y[:, :self.args.label_len, :], dec_inp], dim=1).float().to(self.device)
+            
+            # encoder - decoder
+            if self.args.use_amp:
+                with torch.cuda.amp.autocast():
+                    if self.args.output_attention:
+                        outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
+                    else:
+                        outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
+            else:
                 if self.args.output_attention:
                     outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
                 else:
                     outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
-        else:
-            if self.args.output_attention:
-                outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)[0]
-            else:
-                outputs = self.model(batch_x, batch_x_mark, dec_inp, batch_y_mark)
-        if self.args.inverse:
-            outputs = dataset_object.inverse_transform(outputs)
-        f_dim = -1 if self.args.features == 'MS' else 0
-        batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
+            
+            if self.args.inverse:
+                outputs = dataset_object.inverse_transform(outputs)
+            
+            f_dim = -1 if self.args.features == 'MS' else 0
+            batch_y = batch_y[:, -self.args.pred_len:, f_dim:].to(self.device)
 
-        return outputs, batch_y
+            return outputs, batch_y

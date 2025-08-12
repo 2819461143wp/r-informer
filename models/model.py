@@ -11,29 +11,28 @@ from models.embed import DataEmbeddingWithLocalRNN
 
 class Informer(nn.Module):
     def __init__(self, enc_in, dec_in, c_out, seq_len, label_len, out_len,
-                factor=5, d_model=512, n_heads=8, e_layers=3, d_layers=2, d_ff=512,
-                dropout=0.0, attn='prob', embed='fixed', freq='h', activation='gelu',
-                output_attention = False, distil=True, mix=True,
-                device=torch.device('cuda:0')):
+                 factor=5, d_model=512, n_heads=8, e_layers=3, d_layers=2, d_ff=512,
+                 dropout=0.0, attn='prob', embed='fixed', freq='h', activation='gelu',
+                 output_attention=False, distil=True, mix=True,
+                 device=torch.device('cuda:0'), task_type='prediction', num_classes=None):
         super(Informer, self).__init__()
         self.pred_len = out_len
         self.attn = attn
         self.output_attention = output_attention
+        self.task_type = task_type
+        self.num_classes = num_classes
 
         # Encoding
-        self.enc_embedding = DataEmbeddingWithLocalRNN(enc_in, d_model, rnn_type='LSTM', ksize=6, dropout=dropout)
-        self.dec_embedding = DataEmbeddingWithLocalRNN(dec_in, d_model, rnn_type='LSTM', ksize=6, dropout=dropout)
-        # self.enc_embedding = DataEmbedding(enc_in, d_model, embed, freq, dropout)
-        # self.dec_embedding = DataEmbedding(dec_in, d_model, embed, freq, dropout)
-
+        self.enc_embedding = DataEmbedding(enc_in, d_model, embed, freq, dropout)
+        
         # Attention
-        Attn = ProbAttention if attn=='prob' else FullAttention
+        Attn = ProbAttention if attn == 'prob' else FullAttention
         # Encoder
         self.encoder = Encoder(
             [
                 EncoderLayer(
                     AttentionLayer(Attn(False, factor, attention_dropout=dropout, output_attention=output_attention),
-                                d_model, n_heads, mix=False),
+                                   d_model, n_heads, mix=False),
                     d_model,
                     d_ff,
                     dropout=dropout,
@@ -43,46 +42,63 @@ class Informer(nn.Module):
             [
                 ConvLayer(
                     d_model
-                ) for l in range(e_layers-1)
+                ) for l in range(e_layers - 1)
             ] if distil else None,
             norm_layer=torch.nn.LayerNorm(d_model)
         )
-        # Decoder
-        self.decoder = Decoder(
-            [
-                DecoderLayer(
-                    AttentionLayer(Attn(True, factor, attention_dropout=dropout, output_attention=False),
-                                d_model, n_heads, mix=mix),
-                    AttentionLayer(FullAttention(False, factor, attention_dropout=dropout, output_attention=False),
-                                d_model, n_heads, mix=False),
-                    d_model,
-                    d_ff,
-                    dropout=dropout,
-                    activation=activation,
-                )
-                for l in range(d_layers)
-            ],
-            norm_layer=torch.nn.LayerNorm(d_model)
-        )
-        # self.end_conv1 = nn.Conv1d(in_channels=label_len+out_len, out_channels=out_len, kernel_size=1, bias=True)
-        # self.end_conv2 = nn.Conv1d(in_channels=d_model, out_channels=c_out, kernel_size=1, bias=True)
-        self.projection = nn.Linear(d_model, c_out, bias=True)
+
+        if self.task_type == 'prediction':
+            self.dec_embedding = DataEmbedding(dec_in, d_model, embed, freq, dropout)
+            # Decoder
+            self.decoder = Decoder(
+                [
+                    DecoderLayer(
+                        AttentionLayer(Attn(True, factor, attention_dropout=dropout, output_attention=False),
+                                       d_model, n_heads, mix=mix),
+                        AttentionLayer(FullAttention(False, factor, attention_dropout=dropout, output_attention=False),
+                                       d_model, n_heads, mix=False),
+                        d_model,
+                        d_ff,
+                        dropout=dropout,
+                        activation=activation,
+                    )
+                    for l in range(d_layers)
+                ],
+                norm_layer=torch.nn.LayerNorm(d_model)
+            )
+            self.projection = nn.Linear(d_model, c_out, bias=True)
+        elif self.task_type == 'classification':
+            self.act = F.gelu
+            self.dropout = nn.Dropout(dropout)
+            self.projection = nn.Linear(d_model * seq_len, num_classes)
 
     def forward(self, x_enc, x_mark_enc, x_dec, x_mark_dec,
                 enc_self_mask=None, dec_self_mask=None, dec_enc_mask=None):
-        enc_out = self.enc_embedding(x_enc, x_mark_enc)
-        enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)
+        if self.task_type == 'prediction':
+            enc_out = self.enc_embedding(x_enc, x_mark_enc)
+            enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)
 
-        dec_out = self.dec_embedding(x_dec, x_mark_dec)
-        dec_out = self.decoder(dec_out, enc_out, x_mask=dec_self_mask, cross_mask=dec_enc_mask)
-        dec_out = self.projection(dec_out)
+            dec_out = self.dec_embedding(x_dec, x_mark_dec)
+            dec_out = self.decoder(dec_out, enc_out, x_mask=dec_self_mask, cross_mask=dec_enc_mask)
+            dec_out = self.projection(dec_out)
 
-        # dec_out = self.end_conv1(dec_out)
-        # dec_out = self.end_conv2(dec_out.transpose(2,1)).transpose(1,2)
-        if self.output_attention:
-            return dec_out[:,-self.pred_len:,:], attns
-        else:
-            return dec_out[:,-self.pred_len:,:] # [B, L, D]
+            if self.output_attention:
+                return dec_out[:, -self.pred_len:, :], attns
+            else:
+                return dec_out[:, -self.pred_len:, :]  # [B, L, D]
+        elif self.task_type == 'classification':
+            enc_out = self.enc_embedding(x_enc, x_mark_enc)
+            enc_out, attns = self.encoder(enc_out, attn_mask=enc_self_mask)
+            
+            output = self.act(enc_out)
+            output = self.dropout(output)
+            output = output.reshape(output.size(0), -1)
+            output = self.projection(output)
+            
+            if self.output_attention:
+                return output, attns
+            else:
+                return output
 
 
 class InformerStack(nn.Module):
